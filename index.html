@@ -19,12 +19,13 @@
         }
         canvas {
             border: 1px solid black;
+            width: 425px;
+            height: 425px;
         }
         .vector-label {
             position: absolute;
-            background: white;
-            padding: 2px;
-            border: 1px solid black;
+            background: transparent;
+            border: none;
             font-size: 12px;
         }
         .solution {
@@ -48,6 +49,8 @@
             background-color: red;
         }
     </style>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
     <h1>Problema de Colisiones</h1>
@@ -56,7 +59,7 @@
         <div>
             <h2>Antes de la colisión</h2>
             <div class="canvas-container">
-                <canvas id="beforeCanvas" width="400" height="400"></canvas>
+                <canvas id="beforeCanvas" width="425" height="425"></canvas>
                 <div id="v_ai_label" class="vector-label"></div>
                 <div id="v_ri_label" class="vector-label"></div>
             </div>
@@ -64,7 +67,7 @@
         <div>
             <h2>Después de la colisión</h2>
             <div class="canvas-container">
-                <canvas id="afterCanvas" width="400" height="400"></canvas>
+                <canvas id="afterCanvas" width="425" height="425"></canvas>
                 <div id="v_af_label" class="vector-label"></div>
                 <div id="v_rf_label" class="vector-label"></div>
             </div>
@@ -90,7 +93,7 @@
         <button onclick="checkSolution()">Comprobar</button>
     </div>
     <script>
-        let m1, m2, v_ai, v_ri, alpha;
+        let m1, m2, v_ai, v_ri, alpha, v_f;
 
         function getRandom(min, max) {
             return Math.random() * (max - min) + min;
@@ -102,6 +105,9 @@
             v_ai = getRandom(1, 20).toFixed(2);
             v_ri = getRandom(1, 20).toFixed(2);
             alpha = getRandom(0, 90).toFixed(2);
+
+            const direction = Math.random() < 0.5 ? -1 : 1; // Randomly decide up or down
+            v_ri *= direction;
 
             document.getElementById('enunciado').innerText = `
                 Una bola azul de ${m1} g de masa se mueve horizontalmente con una velocidad de ${v_ai} m/s e impacta con otra bola roja que se mueve verticalmente con una velocidad de ${v_ri} m/s y cuya masa es ${m2} g. 
@@ -124,38 +130,45 @@
             drawGrid(ctx, canvas);
             drawAxes(ctx, canvas);
 
+            // Scale factors for vectors
+            const scale = 10;
+            const scaled_v_ai = v_ai * scale;
+            const scaled_v_ri = v_ri * scale;
+
             // Draw blue ball and its velocity vector
             ctx.fillStyle = 'blue';
             ctx.beginPath();
-            ctx.arc(100, 200, 10, 0, 2 * Math.PI);
+            ctx.arc(50, 200, 10, 0, 2 * Math.PI);
             ctx.fill();
 
             ctx.strokeStyle = 'blue';
             ctx.beginPath();
-            ctx.moveTo(100, 200);
-            ctx.lineTo(100 + v_ai * 10, 200);
+            ctx.moveTo(50, 200);
+            ctx.lineTo(50 + scaled_v_ai, 200);
             ctx.stroke();
 
             // Draw red ball and its velocity vector
             ctx.fillStyle = 'red';
             ctx.beginPath();
-            ctx.arc(300, 100, 10, 0, 2 * Math.PI);
+            ctx.arc(200, 200 - Math.sign(v_ri) * 150, 10, 0, 2 * Math.PI);
             ctx.fill();
 
             ctx.strokeStyle = 'red';
             ctx.beginPath();
-            ctx.moveTo(300, 100);
-            ctx.lineTo(300, 100 + v_ri * 10);
+            ctx.moveTo(200, 200 - Math.sign(v_ri) * 150);
+            ctx.lineTo(200, 200 - Math.sign(v_ri) * 150 + scaled_v_ri);
             ctx.stroke();
 
             // Position labels
             document.getElementById('v_ai_label').innerText = 'v_{a,i}';
             document.getElementById('v_ai_label').style.top = '180px';
-            document.getElementById('v_ai_label').style.left = `${100 + v_ai * 10}px`;
+            document.getElementById('v_ai_label').style.left = `${50 + scaled_v_ai}px`;
 
             document.getElementById('v_ri_label').innerText = 'v_{r,i}';
-            document.getElementById('v_ri_label').style.top = `${100 + v_ri * 10}px`;
-            document.getElementById('v_ri_label').style.left = '310px';
+            document.getElementById('v_ri_label').style.top = `${200 - Math.sign(v_ri) * 150 + scaled_v_ri}px`;
+            document.getElementById('v_ri_label').style.left = '210px';
+
+            MathJax.typeset();
         }
 
         function drawAfterCollision(alpha) {
@@ -170,30 +183,42 @@
             drawAxes(ctx, canvas);
 
             // Calculate final velocity vector components
-            let v_f = 10; // Just a placeholder, calculate based on problem requirements
+            v_f = Math.sqrt((m1 * v_ai / 1000) ** 2 + (m2 * v_ri / 1000) ** 2) / (m1 + m2);
             let vx_f = v_f * Math.cos(alpha * Math.PI / 180);
             let vy_f = v_f * Math.sin(alpha * Math.PI / 180);
+
+            // Scale factors for vectors
+            const scale = 100;
 
             // Draw blue and red balls combined and their velocity vector
             ctx.fillStyle = 'purple';
             ctx.beginPath();
-            ctx.arc(200, 200, 10, 0, 2 * Math.PI);
+            ctx.arc(212, 212, 10, 0, 2 * Math.PI);
             ctx.fill();
 
             ctx.strokeStyle = 'purple';
+            ctx.setLineDash([5, 5]); // Dotted line for direction
             ctx.beginPath();
-            ctx.moveTo(200, 200);
-            ctx.lineTo(200 + vx_f * 10, 200 - vy_f * 10);
+            ctx.moveTo(212, 212);
+            ctx.lineTo(212 + vx_f * scale, 212 - vy_f * scale);
+            ctx.stroke();
+
+            ctx.setLineDash([]); // Solid line for vector
+            ctx.beginPath();
+            ctx.moveTo(212, 212);
+            ctx.lineTo(212 + vx_f * scale, 212 - vy_f * scale);
             ctx.stroke();
 
             // Position labels
             document.getElementById('v_af_label').innerText = 'v_{a,f}';
-            document.getElementById('v_af_label').style.top = `${200 - vy_f * 10}px`;
-            document.getElementById('v_af_label').style.left = `${200 + vx_f * 10}px`;
+            document.getElementById('v_af_label').style.top = `${212 - vy_f * scale}px`;
+            document.getElementById('v_af_label').style.left = `${212 + vx_f * scale}px`;
 
             document.getElementById('v_rf_label').innerText = 'v_{r,f}';
-            document.getElementById('v_rf_label').style.top = `${200 - vy_f * 10}px`;
-            document.getElementById('v_rf_label').style.left = `${200 + vx_f * 10}px`;
+            document.getElementById('v_rf_label').style.top = `${212 - vy_f * scale}px`;
+            document.getElementById('v_rf_label').style.left = `${212 + vx_f * scale}px`;
+
+            MathJax.typeset();
         }
 
         function drawGrid(ctx, canvas) {
@@ -226,19 +251,18 @@
         }
 
         function checkSolution() {
-            const p_xi = m1 * v_ai / 1000;
-            const p_yi = m2 * v_ri / 1000;
-            const v_fx = (p_xi / (m1 + m2)).toFixed(2);
-            const v_fy = (p_yi / (m1 + m2)).toFixed(2);
-            const v_f = Math.sqrt(v_fx * v_fx + v_fy * v_fy).toFixed(2);
+            const p_xi = (m1 * v_ai / 1000).toFixed(2);
+            const p_yi = (m2 * v_ri / 1000).toFixed(2);
+            const v_fx = (v_f * Math.cos(alpha * Math.PI / 180)).toFixed(2);
+            const v_fy = (v_f * Math.sin(alpha * Math.PI / 180)).toFixed(2);
 
             checkAnswer('p_xi', p_xi);
             checkAnswer('p_yi', p_yi);
             checkAnswer('v_fx', v_fx);
             checkAnswer('v_fy', v_fy);
-            checkAnswer('p_fx', (p_xi).toFixed(2));
-            checkAnswer('p_fy', (p_yi).toFixed(2));
-            checkAnswer('v_f', v_f);
+            checkAnswer('p_fx', (p_xi * 1000 / m1).toFixed(2));
+            checkAnswer('p_fy', (p_yi * 1000 / m2).toFixed(2));
+            checkAnswer('v_f', v_f.toFixed(2));
         }
 
         function checkAnswer(inputId, correctValue) {
